@@ -1,3 +1,4 @@
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,7 +9,7 @@ import time
 
 # Set page config first
 st.set_page_config(
-    page_title="Dental Call Analytics", 
+    page_title="Dental Call Analytics",
     layout="wide",
     page_icon="📞",
     initial_sidebar_state="expanded"
@@ -81,28 +82,28 @@ st.markdown("""
         border-radius: 8px;
         font-size: 0.9em;
     }
-    
+
     /* Animations */
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
     }
     @keyframes fadeInUp {
-        from { 
+        from {
             opacity: 0;
             transform: translateY(20px);
         }
-        to { 
+        to {
             opacity: 1;
             transform: translateY(0);
         }
     }
     @keyframes slideIn {
-        from { 
+        from {
             opacity: 0;
             transform: translateX(-20px);
         }
-        to { 
+        to {
             opacity: 1;
             transform: translateX(0);
         }
@@ -112,12 +113,12 @@ st.markdown("""
         50% { transform: scale(1.02); }
         100% { transform: scale(1); }
     }
-    
+
     /* Progress bar for loading */
     .stProgress > div > div > div > div {
         background-color: #3498db;
     }
-    
+
     /* Sidebar styling */
     .css-1d391kg {
         background-color: #f8f9fa;
@@ -132,44 +133,44 @@ def load_data():
         # Show loading progress
         progress_bar = st.progress(0)
         status_text = st.empty()
-        
+
         status_text.text("Loading data...")
         progress_bar.progress(30)
-        
+
         sheet_url = "https://docs.google.com/spreadsheets/d/1Syrq5xPz9VZ6iBJ79TMtFGvT3w7ZGP4GpgbbQZv11Dk/export?format=csv"
         df = pd.read_csv(sheet_url)
-        
+
         progress_bar.progress(60)
         status_text.text("Processing data...")
-        
+
         # Clean column names
         df.columns = df.columns.str.strip().str.replace(" ", "_")
-        
+
         # Convert Call_Time to datetime
         df["Call_Time"] = pd.to_datetime(df["Call_Time"], errors="coerce")
-        
+
         # Create date features
         df["Date"] = df["Call_Time"].dt.date
         df["Hour"] = df["Call_Time"].dt.hour
         df["Day_Of_Week"] = df["Call_Time"].dt.day_name()
-        
+
         # Fill missing values
         df.fillna("", inplace=True)
-        
+
         # Convert duration columns to numeric
         duration_cols = ['Ring_Duration', 'Conversation_Duration', 'Voicemail_Duration', 'Total_Duration']
         for col in duration_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-        
+
         progress_bar.progress(100)
         status_text.text("✅ Data loaded successfully!")
         time.sleep(0.5)  # Brief pause to show completion
         progress_bar.empty()
         status_text.empty()
-        
+
         return df
-        
+
     except Exception as e:
         st.error(f"❌ Error loading data: {e}")
         return pd.DataFrame()
@@ -179,7 +180,7 @@ def classify_call(transcript, call_status):
     try:
         t = str(transcript).lower()
         status = str(call_status).lower()
-        
+
         if "missed" in status:
             return "Missed Call"
         elif any(w in t for w in ["book", "appointment", "schedule", "availability"]):
@@ -219,11 +220,11 @@ if not df.empty:
     <div class="insight-box">
         <h4 style='margin:0; color:white;'>📊 Quick Overview</h4>
         <p style='margin:5px 0; color:white; font-size:1.1em;'>
-            Analyzing <strong>{total_calls:,} calls</strong> with AI-powered insights to help <strong>CareStack</strong> enhance 
+            Analyzing <strong>{total_calls:,} calls</strong> with AI-powered insights to help <strong>CareStack</strong> enhance
             patient experience, scheduling efficiency, and front-desk performance.
         </p>
         <p style='margin:8px 0 0 0; color:#f0f0f0; font-size:0.95em;'>
-            CareStack (<a href='https://carestack.com/en-GB' target='_blank' style='color:#fcd34d; text-decoration:none;'>carestack.com</a>) 
+            CareStack (<a href='https://carestack.com/en-GB' target='_blank' style='color:#fcd34d; text-decoration:none;'>carestack.com</a>)
             provides an all-in-one cloud-based dental practice management platform used by modern dental practices globally.
         </p>
     </div>
@@ -236,9 +237,9 @@ st.sidebar.markdown("### 🎛️ Dashboard Controls")
 filtered_df = df.copy()
 
 if not df.empty:
-    min_date = df['Date'].min()
-    max_date = df['Date'].max()
-    
+    min_date = filtered_df['Date'].min()
+    max_date = filtered_df['Date'].max()
+
     st.sidebar.markdown("**📅 Date Range**")
     date_range = st.sidebar.date_input(
         "Select Date Range",
@@ -251,24 +252,26 @@ if not df.empty:
     st.sidebar.markdown("**📞 Call Direction**")
     call_direction = st.sidebar.multiselect(
         "Select call directions",
-        options=df['Call_Direction'].unique(),
-        default=df['Call_Direction'].unique(),
+        options=filtered_df['Call_Direction'].unique(),
+        default=filtered_df['Call_Direction'].unique(),
         label_visibility="collapsed"
     )
 
     st.sidebar.markdown("**🏷️ Call Categories**")
     call_categories = st.sidebar.multiselect(
         "Filter by category",
-        options=df['Category'].unique(),
-        default=df['Category'].unique(),
+        options=filtered_df['Category'].unique(),
+        default=filtered_df['Category'].unique(),
         label_visibility="collapsed"
     )
 
     # Apply filters
-    if len(date_range) == 2:
+    if date_range and len(date_range) == 2: # Check if date_range is not None and has two elements
+        start_date = date_range[0]
+        end_date = date_range[1]
         filtered_df = filtered_df[
-            (filtered_df['Date'] >= date_range[0]) & 
-            (filtered_df['Date'] <= date_range[1])
+            (filtered_df['Date'] >= start_date) &
+            (filtered_df['Date'] <= end_date)
         ]
     if call_direction:
         filtered_df = filtered_df[filtered_df['Call_Direction'].isin(call_direction)]
@@ -378,52 +381,52 @@ st.markdown('<div class="section-header">📊 Visual Analytics</div>', unsafe_al
 if not filtered_df.empty:
     # Create tabs for different chart types
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Trends", "📞 Call Types", "🕒 Patterns", "📋 Details"])
-    
+
     with tab1:
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.markdown("**Daily Call Volume**")
-            
+
             fig1, ax1 = plt.subplots(figsize=(10, 4))
             calls_per_day = filtered_df.groupby("Date").size()
-            
+
             if not calls_per_day.empty:
-                ax1.plot(calls_per_day.index, calls_per_day.values, 
+                ax1.plot(calls_per_day.index, calls_per_day.values,
                         marker="o", color="#3498db", linewidth=2, markersize=4)
                 ax1.fill_between(calls_per_day.index, calls_per_day.values, alpha=0.2, color="#3498db")
-                
+
                 ax1.set_xlabel("Date")
                 ax1.set_ylabel("Calls")
                 ax1.grid(True, linestyle='--', alpha=0.3)
                 ax1.tick_params(axis='x', rotation=45)
-                
+
                 plt.tight_layout()
                 st.pyplot(fig1)
             st.markdown('</div>', unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown("**📈 Trend Insights**")
             if not calls_per_day.empty:
                 peak_day = calls_per_day.idxmax()
                 peak_calls = calls_per_day.max()
                 avg_daily = calls_per_day.mean()
-                
+
                 st.metric("Peak Day", f"{peak_calls} calls", f"on {peak_day}")
                 st.metric("Daily Average", f"{avg_daily:.1f}", "calls per day")
                 st.metric("Total Period", f"{calls_per_day.sum():,}", f"over {len(calls_per_day)} days")
-    
+
     with tab2:
         col1, col2 = st.columns([1, 1])
-        
+
         with col1:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.markdown("**Call Status Distribution**")
-            
+
             fig2, ax2 = plt.subplots(figsize=(8, 6))
             status_counts = filtered_df["Call_Status"].value_counts()
-            
+
             if not status_counts.empty:
                 colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6']
                 wedges, texts, autotexts = ax2.pie(
@@ -434,89 +437,89 @@ if not filtered_df.empty:
                     colors=colors[:len(status_counts)],
                     textprops={'fontsize': 10}
                 )
-                
+
                 for autotext in autotexts:
                     autotext.set_color('white')
                     autotext.set_fontweight('bold')
-                
+
                 plt.tight_layout()
                 st.pyplot(fig2)
             st.markdown('</div>', unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.markdown("**Call Categories**")
-            
+
             category_counts = filtered_df["Category"].value_counts().head(8)
             fig3, ax3 = plt.subplots(figsize=(8, 6))
-            
+
             if not category_counts.empty:
                 y_pos = np.arange(len(category_counts))
                 colors = plt.cm.Set3(np.linspace(0, 1, len(category_counts)))
-                
+
                 bars = ax3.barh(y_pos, category_counts.values, color=colors, alpha=0.8)
                 ax3.set_yticks(y_pos)
                 ax3.set_yticklabels(category_counts.index, fontsize=10)
                 ax3.set_xlabel("Number of Calls")
-                
+
                 plt.tight_layout()
                 st.pyplot(fig3)
             st.markdown('</div>', unsafe_allow_html=True)
-    
+
     with tab3:
         col1, col2 = st.columns([2, 1])
-        
+
         with col1:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.markdown("**Hourly Call Pattern**")
-            
+
             fig4, ax4 = plt.subplots(figsize=(10, 4))
             hourly_calls = filtered_df['Hour'].value_counts().sort_index()
-            
+
             if not hourly_calls.empty:
                 ax4.bar(hourly_calls.index, hourly_calls.values, alpha=0.7, color='#3498db')
                 ax4.set_xlabel("Hour of Day")
                 ax4.set_ylabel("Number of Calls")
                 ax4.set_xticks(range(0, 24, 2))
                 ax4.grid(True, alpha=0.3)
-                
+
                 plt.tight_layout()
                 st.pyplot(fig4)
             st.markdown('</div>', unsafe_allow_html=True)
-        
+
         with col2:
             st.markdown("**🕒 Peak Hours**")
             if not hourly_calls.empty:
                 peak_hour = hourly_calls.idxmax()
                 peak_calls = hourly_calls.max()
                 quiet_hour = hourly_calls.idxmin()
-                
+
                 st.metric("Busiest Hour", f"{peak_hour}:00", f"{peak_calls} calls")
                 st.metric("Quietest Hour", f"{quiet_hour}:00")
                 st.metric("Daily Range", f"{hourly_calls.min()}-{peak_calls}", "calls per hour")
-    
+
     with tab4:
         st.markdown('<div class="chart-container">', unsafe_allow_html=True)
         st.markdown("**Call Duration by Category**")
-        
+
         avg_durations = filtered_df.groupby("Category")["Conversation_Duration"].mean().nlargest(10)
         fig5, ax5 = plt.subplots(figsize=(10, 6))
-        
+
         if not avg_durations.empty:
             y_pos = np.arange(len(avg_durations))
             colors = plt.cm.viridis(np.linspace(0, 1, len(avg_durations)))
-            
+
             bars = ax5.barh(y_pos, avg_durations.values, color=colors, alpha=0.8)
             ax5.set_yticks(y_pos)
             ax5.set_yticklabels(avg_durations.index, fontsize=10)
             ax5.set_xlabel("Average Duration (seconds)")
-            
+
             # Add value labels
             for i, bar in enumerate(bars):
                 width = bar.get_width()
-                ax5.text(width + 1, bar.get_y() + bar.get_height()/2, 
+                ax5.text(width + 1, bar.get_y() + bar.get_height()/2,
                         f'{width:.1f}s', ha='left', va='center', fontsize=9)
-            
+
             plt.tight_layout()
             st.pyplot(fig5)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -527,7 +530,7 @@ st.markdown('<div class="section-header">💡 Business Insights</div>', unsafe_a
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("""
+    st.markdown(f"""
     <div class="front-desk-impact">
     <h4>🎯 Front Desk Optimization</h4>
     <ul>
@@ -539,7 +542,7 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
     <div class="business-impact">
     <h4>💰 Revenue Opportunities</h4>
     <ul>
@@ -556,23 +559,23 @@ st.markdown('<div class="section-header">🔍 Data Explorer</div>', unsafe_allow
 if not filtered_df.empty:
     # Add search and filter options for the data table
     col1, col2 = st.columns([1, 2])
-    
+
     with col1:
         st.markdown("**Filter Data**")
         show_columns = st.multiselect(
             "Select columns to display:",
-            options=['Call_Time', 'Call_Direction', 'Call_Status', 'Contact_Type', 'Category', 'Conversation_Duration'],
-            default=['Call_Time', 'Call_Status', 'Category', 'Conversation_Duration']
+            options=filtered_df.columns.tolist(), # Get all columns from the filtered dataframe
+            default=['Call_Time', 'Call_Direction', 'Call_Status', 'Contact_Type', 'Category', 'Conversation_Duration']
         )
-        
-        rows_to_show = st.slider("Number of rows to display:", 10, 100, 20)
-    
+
+        rows_to_show = st.slider("Number of rows to display:", 10, len(filtered_df) if not filtered_df.empty else 10, 20) # Adjust max slider value
+
     with col2:
         st.markdown("**Call Details**")
         if show_columns:
             st.dataframe(
                 filtered_df[show_columns].sort_values('Call_Time', ascending=False).head(rows_to_show),
-                use_container_width=True,
+                width='stretch',
                 height=400
             )
             st.caption(f"Showing {min(rows_to_show, len(filtered_df))} of {len(filtered_df):,} total calls")
